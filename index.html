@@ -42,6 +42,10 @@ button{
 
 button:active{transform:scale(.95)}
 
+#buttons{
+  text-align:center;
+}
+
 #buttons button{
   width:64px;
   border-radius:10px;
@@ -61,9 +65,9 @@ button:active{transform:scale(.95)}
 }
 
 #numberDisplay{
-  font-size:26px;
+  font-size:34px; /* BIGGER NUMBER */
   font-weight:800;
-  margin:12px 0;
+  margin:18px 0;
   word-break:break-all;
 }
 
@@ -79,35 +83,78 @@ button:active{transform:scale(.95)}
   display:flex;
   align-items:center;
   justify-content:center;
+  z-index:10;
+}
+
+.help-btn{
+  position:fixed;
+  top:12px;
+  right:12px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  font-size:20px;
+  background:linear-gradient(135deg,#f39c12,#f1c40f);
+  color:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+}
+
+.help-btn-static{
+  background:linear-gradient(135deg,#f39c12,#f1c40f);
+  color:#000;
+  font-weight:700;
 }
 
 .win{color:#2ecc71}
 .lose{color:#e74c3c}
 .difficulty-label{font-size:14px;opacity:.85}
+
+/* GAME LAYOUT */
+.game-layout{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  align-items:flex-start;
+}
+
+.left-area{
+  text-align:center;
+}
+
+.right-area{
+  width:140px;
+}
+
+.small-btn{
+  font-size:13px;
+  padding:10px;
+  width:100%;
+}
+
+.divisible-label{
+  font-weight:700;
+  margin:8px 0 6px;
+  text-align:center;
+}
 </style>
 </head>
 
 <body>
 
-<!-- MAIN TITLE -->
+<!-- MAIN MENU -->
 <div id="mainMenu" class="screen active">
   <h1>Divisibility Challenge</h1>
-
   <button onclick="show('title')">▶ Play</button>
-
-  <button onclick="alert(
-`HOW TO PLAY
-• A large number appears
-• Select ALL divisors from 2–15
-• Missing or extra = lose
-• NONE if no divisor fits
-• Remove Big Brothers auto-handles 11–15`
-)">❓ How to Play</button>
+  <button onclick="showHowTo()">❓ How to Play</button>
 </div>
 
-<!-- DIFFICULTY SCREEN -->
+<!-- DIFFICULTY -->
 <div id="title" class="screen">
 <h1>Select Difficulty</h1>
+<button class="help-btn-static" onclick="showHowTo()">❓ How to Play</button>
 
 <button onclick="startGame('baby')">Baby 🏆 <span id="hs-baby">0</span></button>
 <button onclick="startGame('james')">James Masarap 🏆 <span id="hs-james">0</span></button>
@@ -115,20 +162,30 @@ button:active{transform:scale(.95)}
 <button onclick="startGame('sirjerry')">🔥 Sir Jerry Pampapawis 🏆 <span id="hs-sirjerry">0</span></button>
 </div>
 
-<!-- GAME SCREEN -->
+<!-- GAME -->
 <div id="game" class="screen">
 <button class="home-btn" onclick="goMain()">🏠</button>
+<button class="help-btn" onclick="showHowTo()">❓</button>
 
 <h3>⏱ Time: <span id="time"></span>s</h3>
 <div class="difficulty-label">Difficulty: <span id="difficultyText"></span></div>
 
 <div id="numberDisplay"></div>
 
-<button onclick="removeBigBrothers()">🧹 Remove Big Brothers</button>
-<button onclick="finishEarly()">⏩ Skip Time</button>
-<button onclick="useNone()">🚫 NONE</button>
+<div class="game-layout">
 
-<div id="buttons"></div>
+  <div class="left-area">
+    <div class="divisible-label">Divisible Numbers</div>
+    <div id="buttons"></div>
+  </div>
+
+  <div class="right-area">
+    <button class="small-btn" onclick="removeBigBrothers()">🧹 Remove Big Brothers</button>
+    <button class="small-btn" onclick="useNone()">🚫 NONE</button>
+    <button class="small-btn" onclick="finishEarly()">⏩ Skip the time</button>
+  </div>
+
+</div>
 
 <div class="box">
 <h3>📘 Divisibility Rules</h3>
@@ -137,7 +194,7 @@ style="width:100%;max-width:420px;border-radius:12px">
 </div>
 </div>
 
-<!-- RESULT SCREEN -->
+<!-- RESULT -->
 <div id="result" class="screen">
 <h1 id="resultText"></h1>
 
@@ -289,6 +346,19 @@ function check(usedNone=false){
 
 function nextGame(){startGame(mode)}
 function goMain(){clearInterval(timer);show('mainMenu')}
+
+function showHowTo(){
+  alert(
+`HOW TO PLAY
+
+• A big number appears
+• Select ALL divisors from 2–15
+• One mistake = LOSE
+• NONE if no divisors fit
+• Remove Big Brothers auto-handles 11–15
+• Be 100% correct to WIN`
+  );
+}
 </script>
 
 </body>
