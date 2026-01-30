@@ -285,6 +285,487 @@ function check(usedNone=false){
   document.getElementById("playerList").innerText=selected.join(", ")||"None";
   document.getElementById("nextBtn").style.display=win?"block":"none";
   show('result');
+}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Divisibility Challenge</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at top,#1f4068,#0f2027);
+  font-family:'Poppins',sans-serif;
+  color:white;
+  text-align:center;
+}
+
+.screen{display:none;padding:20px;animation:fade .4s ease}
+.active{display:block}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+button{
+  background:linear-gradient(135deg,#273c75,#192a56);
+  color:white;
+  border:none;
+  padding:14px;
+  margin:6px;
+  font-size:16px;
+  border-radius:14px;
+  width:90%;
+  max-width:360px;
+  font-weight:600;
+  box-shadow:0 6px 14px rgba(0,0,0,.35);
+}
+
+button:active{transform:scale(.95)}
+
+#buttons button{
+  width:64px;
+  border-radius:10px;
+  margin:5px;
+  font-weight:700;
+}
+
+.selected{background:#f1c40f;color:#000}
+.correct{background:#2ecc71!important;color:#000}
+.wrong{background:#e74c3c!important;color:#000}
+
+.box{
+  background:rgba(0,0,0,.35);
+  border-radius:16px;
+  padding:14px;
+  margin:14px 0;
+}
+
+#numberDisplay{
+  font-size:26px;
+  font-weight:800;
+  margin:12px 0;
+  word-break:break-all;
+}
+
+.home-btn{
+  position:fixed;
+  top:12px;
+  left:12px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  font-size:20px;
+  background:linear-gradient(135deg,#16a085,#1abc9c);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.win{color:#2ecc71}
+.lose{color:#e74c3c}
+.difficulty-label{font-size:14px;opacity:.85}
+</style>
+</head>
+
+<body>
+
+<!-- MAIN TITLE -->
+<div id="mainMenu" class="screen active">
+  <h1>Divisibility Challenge</h1>
+
+  <button onclick="show('title')">▶ Play</button>
+
+  <button onclick="alert(
+`HOW TO PLAY
+• A large number appears
+• Select ALL divisors from 2–15
+• Missing or extra = lose
+• NONE if no divisor fits
+• Remove Big Brothers auto-handles 11–15`
+)">❓ How to Play</button>
+</div>
+
+<!-- DIFFICULTY SCREEN -->
+<div id="title" class="screen">
+<h1>Select Difficulty</h1>
+
+<button onclick="startGame('baby')">Baby 🏆 <span id="hs-baby">0</span></button>
+<button onclick="startGame('james')">James Masarap 🏆 <span id="hs-james">0</span></button>
+<button onclick="startGame('caluttong')">Caluttong Level 🏆 <span id="hs-caluttong">0</span></button>
+<button onclick="startGame('sirjerry')">🔥 Sir Jerry Pampapawis 🏆 <span id="hs-sirjerry">0</span></button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game" class="screen">
+<button class="home-btn" onclick="goMain()">🏠</button>
+
+<h3>⏱ Time: <span id="time"></span>s</h3>
+<div class="difficulty-label">Difficulty: <span id="difficultyText"></span></div>
+
+<div id="numberDisplay"></div>
+
+<button onclick="removeBigBrothers()">🧹 Remove Big Brothers</button>
+<button onclick="finishEarly()">⏩ Skip Time</button>
+<button onclick="useNone()">🚫 NONE</button>
+
+<div id="buttons"></div>
+
+<div class="box">
+<h3>📘 Divisibility Rules</h3>
+<img src="rules.jpg" alt="Divisibility Rules"
+style="width:100%;max-width:420px;border-radius:12px">
+</div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result" class="screen">
+<h1 id="resultText"></h1>
+
+<div class="box">
+🔥 Current Streak: <span id="currentStreakText">0</span><br>
+🏆 Highest Streak: <span id="highStreakText">0</span>
+</div>
+
+<div class="box">
+<b>Correct Answers</b>
+<p id="correctList"></p>
+</div>
+
+<div class="box">
+<b>Your Answers</b>
+<p id="playerList"></p>
+</div>
+
+<button id="nextBtn" onclick="nextGame()">Next Game</button>
+<button onclick="goMain()">Back to Menu</button>
+</div>
+
+<script>
+let currentNumber, correctDivisors=[], selected=[], timer, timeLeft, mode="";
+let currentStreak={}, highStreak={};
+
+const data={
+  baby:{digits:[3,5],time:60,name:"Baby"},
+  james:{digits:[6,8],time:60,name:"James Masarap"},
+  caluttong:{digits:[9,12],time:60,name:"Caluttong Level"},
+  sirjerry:{digits:[20,30],time:30,name:"Sir Jerry Pampapawis"}
+};
+
+Object.keys(data).forEach(m=>{
+  currentStreak[m]=0;
+  highStreak[m]=Number(localStorage.getItem("high-"+m))||0;
+});
+
+function updateTitle(){
+  for(let m in highStreak){
+    document.getElementById("hs-"+m).innerText=highStreak[m];
+  }
+}
+updateTitle();
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function randomBig(min,max){
+  let d=Math.floor(Math.random()*(max-min+1))+min;
+  let n="";
+  for(let i=0;i<d;i++) n+=Math.floor(Math.random()*10);
+  return n.replace(/^0/,'1');
+}
+
+function startGame(m){
+  clearInterval(timer);
+  mode=m;
+  selected=[];
+  correctDivisors=[];
+  let d=data[m];
+  currentNumber=randomBig(d.digits[0],d.digits[1]);
+  timeLeft=d.time;
+  document.getElementById("difficultyText").innerText=d.name;
+  document.getElementById("numberDisplay").innerText=currentNumber;
+  createButtons();
+  startTimer();
+  show('game');
+}
+
+function createButtons(){
+  let c=document.getElementById("buttons");
+  c.innerHTML="";
+  for(let i=2;i<=15;i++){
+    if(BigInt(currentNumber)%BigInt(i)===0n) correctDivisors.push(i);
+    let b=document.createElement("button");
+    b.innerText=i;
+    b.onclick=()=>{
+      if(b.disabled)return;
+      b.classList.toggle("selected");
+      selected.includes(i)
+        ? selected=selected.filter(x=>x!==i)
+        : selected.push(i);
+    };
+    c.appendChild(b);
+  }
+}
+
+function removeBigBrothers(){
+  document.querySelectorAll("#buttons button").forEach(b=>{
+    let n=+b.innerText;
+    if(n>=11){
+      b.disabled=true;
+      if(correctDivisors.includes(n)){
+        if(!selected.includes(n))selected.push(n);
+        b.className="correct";
+      }else{
+        selected=selected.filter(x=>x!==n);
+        b.className="wrong";
+      }
+    }
+  });
+}
+
+function startTimer(){
+  document.getElementById("time").innerText=timeLeft;
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("time").innerText=timeLeft;
+    if(timeLeft<=0){clearInterval(timer);check();}
+  },1000);
+}
+
+function finishEarly(){clearInterval(timer);check();}
+function useNone(){clearInterval(timer);check(true);}
+
+function check(usedNone=false){
+  let win = usedNone ? correctDivisors.length===0 :
+    correctDivisors.length===selected.length &&
+    correctDivisors.every(x=>selected.includes(x));
+
+  let rt=document.getElementById("resultText");
+  rt.className="";
+
+  if(win){
+    currentStreak[mode]++;
+    if(currentStreak[mode]>highStreak[mode]){
+      highStreak[mode]=currentStreak[mode];
+      localStorage.setItem("high-"+mode,highStreak[mode]);
+    }
+    rt.innerText="🎉 YOU WIN!";
+    rt.classList.add("win");
+  }else{
+    currentStreak[mode]=0;
+    rt.innerText="❌ YOU LOSE";
+    rt.classList.add("lose");
+  }
+
+  updateTitle();
+  document.getElementById("currentStreakText").innerText=currentStreak[mode];
+  document.getElementById("highStreakText").innerText=highStreak[mode];
+  document.getElementById("correctList").innerText=correctDivisors.join(", ")||"None";
+  document.getElementById("playerList").innerText=selected.join(", ")||"None";
+  document.getElementById("nextBtn").style.display=win?"block":"none";
+  show('result');
+}
+
+function nextGame(){startGame(mode)}
+function goMain(){clearInterval(timer);show('mainMenu')}
+</script>
+
+</body>
+</html>
+
+function nextGame(){startGame(mode)}
+function goMain(){clearInterval(timer);show('mainMenu')}
+</script>
+
+</body>
+</html><!-- DIFFICULTY SCREEN -->
+<div id="title" class="screen">
+<h1>Select Difficulty</h1>
+
+<button onclick="startGame('baby')">Baby 🏆 <span id="hs-baby">0</span></button>
+<button onclick="startGame('james')">James Masarap 🏆 <span id="hs-james">0</span></button>
+<button onclick="startGame('caluttong')">Caluttong Level 🏆 <span id="hs-caluttong">0</span></button>
+<button onclick="startGame('sirjerry')">🔥 Sir Jerry Pampapawis 🏆 <span id="hs-sirjerry">0</span></button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game" class="screen">
+<button class="home-btn" onclick="goMain()">🏠</button>
+
+<h3>⏱ Time: <span id="time"></span>s</h3>
+<div class="difficulty-label">Difficulty: <span id="difficultyText"></span></div>
+
+<div id="numberDisplay"></div>
+
+<button onclick="removeBigBrothers()">🧹 Remove Big Brothers</button>
+<button onclick="finishEarly()">⏩ Skip Time</button>
+<button onclick="useNone()">🚫 NONE</button>
+
+<div id="buttons"></div>
+
+<div class="box">
+<h3>📘 Divisibility Rules</h3>
+<img src="rules.jpg" alt="Divisibility Rules"
+style="width:100%;max-width:420px;border-radius:12px">
+</div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result" class="screen">
+<h1 id="resultText"></h1>
+
+<div class="box">
+🔥 Current Streak: <span id="currentStreakText">0</span><br>
+🏆 Highest Streak: <span id="highStreakText">0</span>
+</div>
+
+<div class="box">
+<b>Correct Answers</b>
+<p id="correctList"></p>
+</div>
+
+<div class="box">
+<b>Your Answers</b>
+<p id="playerList"></p>
+</div>
+
+<button id="nextBtn" onclick="nextGame()">Next Game</button>
+<button onclick="goMain()">Back to Menu</button>
+</div>
+
+<script>
+let currentNumber, correctDivisors=[], selected=[], timer, timeLeft, mode="";
+let currentStreak={}, highStreak={};
+
+const data={
+  baby:{digits:[3,5],time:60,name:"Baby"},
+  james:{digits:[6,8],time:60,name:"James Masarap"},
+  caluttong:{digits:[9,12],time:60,name:"Caluttong Level"},
+  sirjerry:{digits:[20,30],time:30,name:"Sir Jerry Pampapawis"}
+};
+
+Object.keys(data).forEach(m=>{
+  currentStreak[m]=0;
+  highStreak[m]=Number(localStorage.getItem("high-"+m))||0;
+});
+
+function updateTitle(){
+  for(let m in highStreak){
+    document.getElementById("hs-"+m).innerText=highStreak[m];
+  }
+}
+updateTitle();
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function randomBig(min,max){
+  let d=Math.floor(Math.random()*(max-min+1))+min;
+  let n="";
+  for(let i=0;i<d;i++) n+=Math.floor(Math.random()*10);
+  return n.replace(/^0/,'1');
+}
+
+function startGame(m){
+  clearInterval(timer);
+  mode=m;
+  selected=[];
+  correctDivisors=[];
+  let d=data[m];
+  currentNumber=randomBig(d.digits[0],d.digits[1]);
+  timeLeft=d.time;
+  document.getElementById("difficultyText").innerText=d.name;
+  document.getElementById("numberDisplay").innerText=currentNumber;
+  createButtons();
+  startTimer();
+  show('game');
+}
+
+function createButtons(){
+  let c=document.getElementById("buttons");
+  c.innerHTML="";
+  for(let i=2;i<=15;i++){
+    if(BigInt(currentNumber)%BigInt(i)===0n) correctDivisors.push(i);
+    let b=document.createElement("button");
+    b.innerText=i;
+    b.onclick=()=>{
+      if(b.disabled)return;
+      b.classList.toggle("selected");
+      selected.includes(i)
+        ? selected=selected.filter(x=>x!==i)
+        : selected.push(i);
+    };
+    c.appendChild(b);
+  }
+}
+
+function removeBigBrothers(){
+  document.querySelectorAll("#buttons button").forEach(b=>{
+    let n=+b.innerText;
+    if(n>=11){
+      b.disabled=true;
+      if(correctDivisors.includes(n)){
+        if(!selected.includes(n))selected.push(n);
+        b.className="correct";
+      }else{
+        selected=selected.filter(x=>x!==n);
+        b.className="wrong";
+      }
+    }
+  });
+}
+
+function startTimer(){
+  document.getElementById("time").innerText=timeLeft;
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("time").innerText=timeLeft;
+    if(timeLeft<=0){clearInterval(timer);check();}
+  },1000);
+}
+
+function finishEarly(){clearInterval(timer);check();}
+function useNone(){clearInterval(timer);check(true);}
+
+function check(usedNone=false){
+  let win = usedNone ? correctDivisors.length===0 :
+    correctDivisors.length===selected.length &&
+    correctDivisors.every(x=>selected.includes(x));
+
+  let rt=document.getElementById("resultText");
+  rt.className="";
+
+  if(win){
+    currentStreak[mode]++;
+    if(currentStreak[mode]>highStreak[mode]){
+      highStreak[mode]=currentStreak[mode];
+      localStorage.setItem("high-"+mode,highStreak[mode]);
+    }
+    rt.innerText="🎉 YOU WIN!";
+    rt.classList.add("win");
+  }else{
+    currentStreak[mode]=0;
+    rt.innerText="❌ YOU LOSE";
+    rt.classList.add("lose");
+  }
+
+  updateTitle();
+  document.getElementById("currentStreakText").innerText=currentStreak[mode];
+  document.getElementById("highStreakText").innerText=highStreak[mode];
+  document.getElementById("correctList").innerText=correctDivisors.join(", ")||"None";
+  document.getElementById("playerList").innerText=selected.join(", ")||"None";
+  document.getElementById("nextBtn").style.display=win?"block":"none";
+  show('result');
 }
 
 function nextGame(){startGame(mode)}
